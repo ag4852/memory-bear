@@ -1,1 +1,5 @@
 .env
+.env.local
+.env.*.local
+*.key
+config/secrets.json
