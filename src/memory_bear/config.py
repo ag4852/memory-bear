@@ -18,7 +18,7 @@ HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
 
 # Tool configuration 
 CONTENT_TAGS = os.getenv("CONTENT_TAGS", "lecture,homework,exam,concepts,research").split(",")
-CLASS_TAGS = os.getenv("CLASS_TAGS", "").split(",") if os.getenv("CLASS_TAGS") else []
+SUBJECTS = os.getenv("SUBJECTS", "general").split(",")
 
 # Application behavior settings
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

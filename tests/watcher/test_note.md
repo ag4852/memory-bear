@@ -1,6 +1,7 @@
 ---
 title: "File Watcher Test Note"
-tags: ["testing", "file-watcher", "integration"]
+subject: "testing"
+tags: ["file-watcher", "integration"]
 ---
 
 # File Watcher Test Note

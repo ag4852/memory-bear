@@ -1,5 +1,6 @@
 ---
 title: "{title}"
+subject: "{subject}"
 tags: {tags}
 ---
 

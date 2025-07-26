@@ -49,6 +49,7 @@ def get_or_create_collection(client):
                 name=collection_name,
                 properties=[
                     Property(name="title", data_type=DataType.TEXT),
+                    Property(name="subject", data_type=DataType.TEXT),
                     Property(name="content", data_type=DataType.TEXT),
                     Property(name="file_path", data_type=DataType.TEXT), 
                     Property(name="tags", data_type=DataType.TEXT_ARRAY),
@@ -63,4 +64,6 @@ def get_or_create_collection(client):
             return collection
         except Exception as create_error:
             logger.error(f"Failed to create {collection_name} collection: {create_error}")
-            raise create_error 
+            raise create_error
+
+

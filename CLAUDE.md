@@ -61,6 +61,7 @@ python -m pytest -v tests/watcher/
 HUGGINGFACE_API_KEY="your_key"      # For embeddings
 NOTES_DIR="/path/to/notes"          # Production notes directory
 TEST_NOTES_DIR="/path/to/test"      # Test notes directory
+SUBJECTS="list,of,your,own,subjects"
 CONTENT_TAGS="lecture,homework,exam,concepts,research"
 LOG_LEVEL="INFO"
 ```

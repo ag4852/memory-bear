@@ -278,7 +278,7 @@ class WatcherTestBase:
         actual_props = actual_object.properties
         
         # Core properties to validate
-        core_properties = ['title', 'content', 'file_path', 'tags', 'created_at', 'updated_at']
+        core_properties = ['title', 'subject', 'content', 'file_path', 'tags', 'created_at', 'updated_at']
         
         # Validate core properties
         for prop in core_properties:
@@ -344,11 +344,10 @@ class WatcherTestBase:
         
         # Get the project root directory (3 levels up from this file)
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        server_path = os.path.join(project_root, 'main.py')
         
-        # Start server process
+        # Start server process using module execution to handle relative imports
         process = subprocess.Popen([
-            'python', server_path, '--test'
+            'python', '-m', 'src.memory_bear.main', '--test'
         ], cwd=project_root, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Wait for server to initialize

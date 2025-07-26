@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 async def edit_study_note(
     file_path: str,
     title: str,
+    subject: Optional[str] = None,
     tags: Optional[List[str]] = None,
     recall_prompts: Optional[List[str]] = None,
     key_concepts: Optional[str] = None
@@ -27,6 +28,7 @@ async def edit_study_note(
     Args:
         file_path: Path to the existing note file
         title: The title of the study note
+        subject: Optional subject (defaults to "General")
         tags: Optional list of tags
         recall_prompts: Optional list of recall prompt strings
         key_concepts: Optional key concepts content (markdown formatted)
@@ -49,6 +51,7 @@ async def edit_study_note(
         # Populate template with new content (LLM provides merged content)
         content = populate_study_note_template(
             title=title,
+            subject=subject,
             tags=tags,
             recall_prompts=recall_prompts,
             key_concepts=key_concepts

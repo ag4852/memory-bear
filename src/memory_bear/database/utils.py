@@ -49,6 +49,7 @@ class MarkdownOperations:
             # Insert into Weaviate
             self.memory_collection.data.insert({
                 "title": parsed_data['title'],
+                "subject": parsed_data['subject'],
                 "content": parsed_data['content'],
                 "file_path": parsed_data['file_path'],
                 "tags": parsed_data['tags'],
@@ -98,6 +99,7 @@ class MarkdownOperations:
                 uuid=existing_uuid,
                 properties={
                     "title": parsed_data['title'],
+                    "subject": parsed_data['subject'],
                     "content": parsed_data['content'],
                     "tags": parsed_data['tags'],
                     "updated_at": parsed_data['updated_at']

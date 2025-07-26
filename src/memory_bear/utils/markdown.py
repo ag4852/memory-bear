@@ -6,19 +6,20 @@ from typing import Dict, List, Optional
 
 def parse_md_file(file_path: str) -> Dict:
     """
-    Parse a markdown file to extract title, tags, content, and file metadata.
+    Parse a markdown file to extract title, subject, tags, content, and file metadata.
     
     Args:
         file_path: Path to the markdown file
         
     Returns:
-        Dictionary containing title, tags, content, file_path, created_at, and updated_at
+        Dictionary containing title, subject, tags, content, file_path, created_at, and updated_at
     """
     with open(file_path, 'r', encoding='utf-8') as f:
         post = frontmatter.load(f)
     
     # Extract metadata
     title = post.metadata.get('title')
+    subject = post.metadata.get('subject', 'General')
     tags = post.metadata.get('tags', [])
     content = post.content
     
@@ -33,6 +34,7 @@ def parse_md_file(file_path: str) -> Dict:
     
     return {
         'title': title,
+        'subject': subject,
         'tags': tags,
         'content': content,
         'file_path': file_path,

@@ -14,7 +14,12 @@ from .prompts import get_prompt
 logger = logging.getLogger(__name__)
 
 @mcp.tool()
-async def search_notes(query: str, ctx: Context, tags: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+async def search_notes(
+    query: str, 
+    ctx: Context, 
+    subject: Optional[str] = None,
+    tags: Optional[List[str]] = None
+) -> List[Dict[str, Any]]:
     get_prompt("SEARCH_NOTES_PROMPT")
 
     weaviate_client = ctx.fastmcp.weaviate_client
@@ -24,7 +29,7 @@ async def search_notes(query: str, ctx: Context, tags: Optional[List[str]] = Non
     logger.info(f"Collection: {collection}")
     
     try:
-        logger.info(f"Search requested for query: '{query}' with tags: {tags}")
+        logger.info(f"Search requested for query: '{query}' with subject: {subject}, tags: {tags}")
         
         # Import and use shared search logic
         from ..utils.search import execute_semantic_search
@@ -33,6 +38,7 @@ async def search_notes(query: str, ctx: Context, tags: Optional[List[str]] = Non
         response = execute_semantic_search(
             collection=collection,
             query=query,
+            subject=subject,
             tags=tags,
             limit=3  # Internal default
         )
@@ -53,6 +59,7 @@ async def search_notes(query: str, ctx: Context, tags: Optional[List[str]] = Non
             
             result = {
                 'title': props.get('title', 'Untitled'),
+                'subject': props.get('subject', 'General'),
                 'content': content,
                 'file_path': props.get('file_path', ''),
                 'tags': props.get('tags', []),

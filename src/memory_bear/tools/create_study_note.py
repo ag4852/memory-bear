@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @mcp.tool()
 async def create_study_note(
     title: str,
+    subject: Optional[str] = None,
     tags: Optional[List[str]] = None,
     recall_prompts: Optional[List[str]] = None,
     key_concepts: Optional[str] = None
@@ -33,6 +34,7 @@ async def create_study_note(
         # Populate template with content
         content = populate_study_note_template(
             title=title,
+            subject=subject,
             tags=tags,
             recall_prompts=recall_prompts,
             key_concepts=key_concepts

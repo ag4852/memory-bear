@@ -45,6 +45,7 @@ def load_template(template_name: str) -> str:
 
 def populate_study_note_template(
     title: str,
+    subject: Optional[str] = None,
     tags: Optional[List[str]] = None,
     recall_prompts: Optional[List[str]] = None,
     key_concepts: Optional[str] = None
@@ -54,6 +55,7 @@ def populate_study_note_template(
     
     Args:
         title: The title of the study note
+        subject: Optional subject (defaults to "General")
         tags: Optional list of tags
         recall_prompts: Optional list of recall prompt strings
         key_concepts: Optional key concepts content (markdown formatted)
@@ -65,6 +67,9 @@ def populate_study_note_template(
     
     # Load the template
     template = load_template("study_note_template.md")
+    
+    # Format subject (use provided or default to "General")
+    formatted_subject = subject if subject else "General"
     
     # Format tags (use as-is or empty list)
     formatted_tags = tags if tags else []
@@ -78,6 +83,7 @@ def populate_study_note_template(
     # Populate template
     content = template.format(
         title=title,
+        subject=formatted_subject,
         tags=formatted_tags,
         recall_prompts=formatted_prompts,
         key_concepts=formatted_concepts

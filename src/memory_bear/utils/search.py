@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 def execute_semantic_search(
     collection, 
-    query: str, 
+    query: str,
+    subject: Optional[str] = None,
     tags: Optional[List[str]] = None, 
     limit: int = 3
 ) -> List:
@@ -23,6 +24,7 @@ def execute_semantic_search(
     Args:
         collection: Weaviate collection instance
         query: Search query string
+        subject: Optional subject to filter by
         tags: Optional list of tags to filter by (must have ALL tags)
         limit: Maximum number of results to return
         
@@ -33,12 +35,15 @@ def execute_semantic_search(
         Exception: If search query fails
     """
     try:
-        logger.info(f"Executing semantic search for query: '{query}' with tags: {tags}, limit: {limit}")
+        logger.info(f"Executing semantic search for query: '{query}' with subject: {subject}, tags: {tags}, limit: {limit}")
         
-        # Build tag filters if specified (must have ALL tags)
+        # Build filters
         filters = None
+        if subject:
+            filters = Filter.by_property("subject").equal(subject)
         if tags:
-            filters = Filter.by_property("tags").contains_all(tags)
+            tag_filter = Filter.by_property("tags").contains_all(tags)
+            filters = filters & tag_filter if filters else tag_filter
         
         # Execute semantic search
         response = collection.query.near_text(

@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 async def find_best_match(
     query: str,
     ctx: Context,
+    subject: Optional[str] = None,
     tags: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
@@ -25,6 +26,7 @@ async def find_best_match(
     Args:
         query: Search query string
         ctx: MCP context containing Weaviate client and collection
+        subject: Optional subject to filter by
         tags: Optional list of tags to filter by
         
     Returns:
@@ -39,7 +41,7 @@ async def find_best_match(
     logger.info(f"Collection: {collection}")
     
     try:
-        logger.info(f"Finding best match for query: '{query}' with tags: {tags}")
+        logger.info(f"Finding best match for query: '{query}' with subject: {subject}, tags: {tags}")
         
         # Import utilities
         from ..utils.search import execute_semantic_search
@@ -49,6 +51,7 @@ async def find_best_match(
         search_results = execute_semantic_search(
             collection=collection,
             query=query,
+            subject=subject,
             tags=tags,
             limit=1  # Only get the best semantic match
         )
@@ -83,6 +86,7 @@ async def find_best_match(
         # Format existing note for context
         existing_note = {
             'title': props.get('title', 'Untitled'),
+            'subject': props.get('subject', 'General'),
             'content': props.get('content', ''),
             'file_path': props.get('file_path', ''),
             'tags': props.get('tags', []),

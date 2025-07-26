@@ -1,6 +1,7 @@
 ---
 title: "Modified Test Note for File Watcher"
-tags: ["modified", "file-watcher", "testing", "updated"]
+subject: "testing"
+tags: ["modified", "file-watcher", "updated"]
 ---
 
 # Modified Test Note for File Watcher
