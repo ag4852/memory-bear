@@ -1,6 +1,7 @@
 import logging
 from mcp.server.fastmcp import FastMCP
 from .database import get_weaviate_client, get_or_create_collection
+from .database.collections import get_or_create_cards_collection
 from .watcher import WatcherManager
 
 # Set up logging
@@ -12,9 +13,10 @@ mcp = FastMCP("Memory Bear")
 def setup_server():
     """Initialize and configure the MCP server"""
     
-    # Store both client and collection 
+    # Store client and both collections
     mcp.weaviate_client = get_weaviate_client()
     mcp.collection = get_or_create_collection(mcp.weaviate_client)
+    mcp.cards_collection = get_or_create_cards_collection(mcp.weaviate_client)
     
     # Perform initial sync before starting file watcher
     try:
@@ -47,7 +49,7 @@ def setup_server():
         mcp.watcher_manager = None  # Ensure it's None for the shutdown check
 
     # Import tools to register them with the server (now that mcp exists)
-    from .tools import search_notes, create_study_note, find_best_match, edit_study_note  # This registers the @mcp.tool() decorated functions
+    from .tools import search_notes, create_study_note, find_best_match, edit_study_note, get_cards_overview, get_cards  # This registers the @mcp.tool() decorated functions
     logger.info("Tools imported and registered")
         
     return mcp
