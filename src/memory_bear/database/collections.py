@@ -112,7 +112,15 @@ def get_or_create_cards_collection(client):
                     Property(name="prompt_text", data_type=DataType.TEXT),
                     Property(name="fsrs_card_json", data_type=DataType.TEXT),
                     Property(name="due_date", data_type=DataType.DATE),
-                    Property(name="review_history", data_type=DataType.TEXT),
+                    Property(
+                        name="review_history", 
+                        data_type=DataType.OBJECT_ARRAY,
+                        nested_properties=[
+                            Property(name="timestamp", data_type=DataType.DATE),
+                            Property(name="fsrs_rating", data_type=DataType.INT),
+                            Property(name="learning_summary", data_type=DataType.TEXT)
+                        ]
+                    ),
                     Property(name="deck_archived", data_type=DataType.BOOLEAN),
                 ],
                 vectorizer_config=Configure.Vectorizer.text2vec_huggingface(

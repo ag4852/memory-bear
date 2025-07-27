@@ -6,8 +6,9 @@ for spaced repetition cards, including creation, updates, and retrieval.
 """
 
 import logging
+import json
 from datetime import datetime, timedelta, timezone
-from fsrs import Scheduler
+from fsrs import Scheduler, Card
 from weaviate.classes.query import Filter
 
 # Get logger for this module
@@ -201,21 +202,102 @@ class CardOperations:
         # Apply limit
         return randomized_cards[:limit]
     
-    def create_cards_from_note(self, note_data: dict, cards_data: list) -> bool:
+    def _parse_recall_prompts(self, content: str) -> list[str]:
         """
-        Create memory cards from a note and insert into Weaviate.
+        Extract recall prompts from markdown content.
         
         Args:
-            note_data: Dictionary containing note metadata (uuid, title, subject, tags)
-            cards_data: List of dictionaries containing card data (prompt_text, etc.)
+            content: Full markdown content of the note
+            
+        Returns:
+            List of prompt text strings (bullet markers removed, empty prompts filtered)
+        """
+        logger.info("Parsing recall prompts from note content")
+        
+        lines = content.split('\n')
+        prompts = []
+        in_recall_section = False
+        
+        for line in lines:
+            stripped_line = line.strip()
+            
+            # Check if we're entering the recall prompts section
+            if stripped_line.lower() == "### recall prompts":
+                in_recall_section = True
+                continue
+            
+            # Check if we've hit another section (1-3 hashtags or ---)
+            if in_recall_section and (stripped_line.startswith('---') or 
+                                    stripped_line.startswith('#') and 
+                                    len(stripped_line.split()[0]) <= 3):
+                break
+            
+            # Process bullet points in the recall section
+            if in_recall_section and stripped_line:
+                # Remove bullet markers (-, *, +) and clean whitespace
+                if stripped_line.startswith(('-', '*', '+')):
+                    prompt_text = stripped_line[1:].strip()
+                    if prompt_text:  # Filter out empty prompts
+                        prompts.append(prompt_text)
+        
+        logger.info(f"Found {len(prompts)} recall prompts")
+        return prompts
+    
+    def create_cards_from_note(self, note_object) -> bool:
+        """
+        Create recall cards from a note object and insert into Weaviate.
+        
+        Args:
+            note_object: Weaviate note object with properties (title, subject, content, tags, etc.)
             
         Returns:
             True if successful, False otherwise
         """
-        # TODO: Implement card creation logic
-        logger.info(f"Creating cards from note: {note_data.get('title', 'Unknown')}")
-        # Note: cards_data parameter will be used in future implementation
-        return True
+        try:
+            note_title = note_object.properties["title"]
+            logger.info(f"Creating cards from note: {note_title}")
+            
+            # Parse recall prompts from note content
+            recall_prompts = self._parse_recall_prompts(note_object.properties["content"])
+            
+            if not recall_prompts:
+                logger.info(f"No recall prompts found in note: {note_title}")
+                return True
+            
+            # Create and insert cards for each recall prompt
+            cards_created = 0
+            for prompt_text in recall_prompts:
+                try:
+                    # Create new FSRS card
+                    fsrs_card = Card()
+                    
+                    # Build card properties matching cards_collection schema
+                    card_properties = {
+                        "parent_note_uuid": str(note_object.uuid),
+                        "parent_note_title": note_object.properties["title"],
+                        "parent_note_subject": note_object.properties["subject"],
+                        "parent_note_tags": note_object.properties["tags"],
+                        "prompt_text": prompt_text,
+                        "fsrs_card_json": json.dumps(fsrs_card.to_dict()),
+                        "due_date": fsrs_card.due,
+                        "review_history": [],
+                        "deck_archived": False
+                    }
+                    
+                    # Insert card into Weaviate
+                    self.cards_collection.data.insert(card_properties)
+                    cards_created += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error creating card for prompt '{prompt_text[:50]}...': {e}")
+                    continue
+            
+            logger.info(f"Successfully created {cards_created} cards from note: {note_title}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error creating cards from note: {e}")
+            return False
     
     def update_card(self, card_uuid: str, rating: int, review_time: float) -> bool:
         """
@@ -358,26 +440,33 @@ class CardOperations:
                     # Calculate retrievability for LLM coaching
                     retrievability = self.fsrs_scheduler.get_card_retrievability(fsrs_card)
                     
+                    # Get native object array from Weaviate
+                    review_history = obj.properties.get("review_history", [])
+                    review_count = len(review_history)
+                    
                     # Build card information useful for study sessions
                     card_info = {
-                        # Essential for review
+                        # Essential identification
                         "card_uuid": str(obj.uuid),
                         "prompt_text": obj.properties["prompt_text"],
                         
-                        # Context for LLM coaching
-                        "retrievability": round(retrievability, 3),
-                        "review_count": len(obj.properties.get("review_history", "").split(",")) if obj.properties.get("review_history") else 0,
-                        "last_review": fsrs_card.last_review.isoformat() if fsrs_card.last_review else None,
+                        # FSRS algorithm data
+                        "fsrs_card_id": fsrs_card.card_id,
+                        "fsrs_state": fsrs_card.state.name,
+                        "fsrs_difficulty": round(fsrs_card.difficulty, 3) if fsrs_card.difficulty is not None else None,
+                        "fsrs_stability": round(fsrs_card.stability, 3) if fsrs_card.stability is not None else None,
+                        "fsrs_due_date": fsrs_card.due.isoformat(),
+                        "fsrs_last_review": fsrs_card.last_review.isoformat() if fsrs_card.last_review else None,
+                        "fsrs_retrievability": round(retrievability, 3),
                         
-                        # Card organization
-                        "parent_note_title": obj.properties["parent_note_title"],
-                        "parent_note_subject": obj.properties["parent_note_subject"], 
-                        "parent_note_tags": obj.properties.get("parent_note_tags", []),
+                        # Review analytics
+                        "review_count": review_count,
+                        "review_history": review_history,  # Native object array from Weaviate
                         
-                        # FSRS metadata (for advanced LLM features)
-                        "due_date": obj.properties["due_date"].isoformat() if obj.properties.get("due_date") else None,
-                        "state": fsrs_card.state.name,
-                        "difficulty": round(fsrs_card.difficulty, 3),
+                        # Source note context
+                        "note_title": obj.properties["parent_note_title"],
+                        "note_subject": obj.properties["parent_note_subject"],
+                        "note_tags": obj.properties.get("parent_note_tags", [])
                     }
                     
                     cards_data.append(card_info)
