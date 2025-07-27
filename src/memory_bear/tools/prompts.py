@@ -115,6 +115,35 @@ Returns:
     - action: "edited" to distinguish from create operations
 """
 
+CREATE_CARDS_FROM_NOTE_PROMPT = """
+Create flashcards from recall prompts in a specific study note.
+
+Call this when the user wants to create flashcards or study cards from recall prompts in their notes.
+
+This tool will:
+1. Search for an exact note title match first
+2. Offer similar note suggestions if no exact match is found  
+3. Check if cards already exist for the note (prevents duplicates)
+4. Create flashcards from all bullet points under the "### Recall Prompts" section
+5. Each bullet point becomes a separate flashcard for spaced repetition study
+
+Args:
+    note_title: Exact title of the note to create cards from
+                Use the exact title as it appears in their notes
+                Examples: "Physics - Quantum Mechanics", "Database Systems - Indexing"
+
+Returns:
+    Dictionary containing:
+    - success: Boolean indicating if cards were created successfully
+    - message: Descriptive message with details
+    - cards_created: Number of cards created (when successful)
+    - note_title: Title of the note processed
+    - suggestions: List of similar note titles (when no exact match found)
+    - next_action_hint: Guidance on how to study the new cards (when successful)
+
+The user can then study the created cards using the get_cards tool with deck_title parameter.
+"""
+
 def get_prompt(prompt_name: str) -> str:
     """Get formatted prompt with dynamic tags."""
     prompt_template = globals()[prompt_name]
