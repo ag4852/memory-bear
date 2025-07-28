@@ -144,6 +144,40 @@ Returns:
 The user can then study the created cards using the get_cards tool with deck_title parameter.
 """
 
+UPDATE_CARD_PROMPT = """
+Update a flashcard after completing a review session with FSRS spaced repetition scheduling.
+
+Call this to finalize each card review after the full learning conversation. This is the final step in the review workflow:
+
+1. Present the card prompt to the user
+2. Have a natural conversation about their understanding  
+3. Based on their responses, evaluate their performance using FSRS difficulty scale
+4. Show your rating assessment to the user (they can override if they disagree)
+5. Call this tool to record the session and schedule the next review
+
+The learning conversation should be thorough - ask follow-up questions, clarify concepts, and gauge their confidence level. Your difficulty assessment should reflect:
+- Did they recall the concept immediately or struggle?
+- Were they confident in their explanation or hesitant?
+- Do they understand the underlying principles or just memorized facts?
+- Can they apply the knowledge or only recite it?
+
+Args:
+    card_uuid: UUID of the reviewed card (from get_cards result)
+    fsrs_rating: Your assessment of their performance:
+                 1 = Again (failed to recall, significant confusion, needs immediate review)
+                 2 = Hard (recalled with major difficulty, uncertain, partial understanding)
+                 3 = Good (recalled correctly with some effort, mostly confident)  
+                 4 = Easy (recalled effortlessly, fully confident, ready for advanced concepts)
+    learning_summary: A reflection of the learning session that captures the user's mental model and what they learned.
+                      Record both what's now in the user's memory about this topic AND what happened during the session.
+                      Include: their current understanding level, how they think about the concept, what they learned/reinforced, areas of confidence vs struggle, their learning style preferences.
+                      Examples: "User now has solid mental model of database indexing - thinks of it as 'book index for fast lookups' - reinforced B-tree structure understanding but struggled with clustered vs non-clustered distinction, learns best with concrete examples"
+                               "Strengthened grasp of async concepts, built connection between promises and real-world waiting, but still needs practice with error handling patterns, responds well to step-by-step breakdowns"
+
+Returns:
+    Dictionary with update status, next review timing, and progress information
+"""
+
 def get_prompt(prompt_name: str) -> str:
     """Get formatted prompt with dynamic tags."""
     prompt_template = globals()[prompt_name]

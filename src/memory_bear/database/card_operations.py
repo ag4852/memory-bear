@@ -8,6 +8,7 @@ for spaced repetition cards, including creation, updates, and retrieval.
 import logging
 import json
 from datetime import datetime, timedelta, timezone
+from typing import Dict, Any
 from fsrs import Scheduler, Card
 from weaviate.classes.query import Filter
 
@@ -243,6 +244,17 @@ class CardOperations:
         logger.info(f"Found {len(prompts)} recall prompts")
         return prompts
     
+    def _validate_update_inputs(self, card_uuid: str, fsrs_rating: int, learning_summary: str):
+        """Validate inputs for card update."""
+        if not isinstance(fsrs_rating, int) or fsrs_rating < 1 or fsrs_rating > 4:
+            raise ValueError(f"Invalid FSRS rating: {fsrs_rating}. Must be 1-4")
+        
+        if not card_uuid or not isinstance(card_uuid, str):
+            raise ValueError(f"Invalid card UUID: {card_uuid}")
+            
+        if not learning_summary or not isinstance(learning_summary, str) or len(learning_summary.strip()) == 0:
+            raise ValueError("Learning summary cannot be empty")
+    
     def create_cards_from_note(self, note_object) -> bool:
         """
         Create recall cards from a note object and insert into Weaviate.
@@ -299,22 +311,87 @@ class CardOperations:
             logger.error(f"Error creating cards from note: {e}")
             return False
     
-    def update_card(self, card_uuid: str, rating: int, review_time: float) -> bool:
+    def update_card(self, card_uuid: str, fsrs_rating: int, learning_summary: str) -> Dict[str, Any]:
         """
         Update a card after review with FSRS scheduling.
         
         Args:
             card_uuid: UUID of the card to update
-            rating: User rating (1-4: Again, Hard, Good, Easy)
-            review_time: Time taken for review in seconds
+            fsrs_rating: User rating (1-4: Again, Hard, Good, Easy)
+            learning_summary: Brief reflection of the learning session
             
         Returns:
-            True if successful, False otherwise
+            Dictionary with success status and updated card information
         """
-        # TODO: Implement card update logic with FSRS
-        logger.info(f"Updating card {card_uuid} with rating {rating}")
-        # Note: review_time parameter will be used in future implementation
-        return True
+        try:
+            logger.info(f"Updating card {card_uuid} with rating {fsrs_rating}")
+            
+            # Validate inputs using helper method
+            self._validate_update_inputs(card_uuid, fsrs_rating, learning_summary)
+            
+            # Direct UUID retrieval (no separate helper function)
+            card_obj = self.cards_collection.query.fetch_object_by_id(card_uuid)
+            if not card_obj:
+                logger.error(f"Card not found: {card_uuid}")
+                return {"success": False, "error": f"Card not found: {card_uuid}"}
+            
+            # Parse FSRS data
+            fsrs_card_json = card_obj.properties.get("fsrs_card_json")
+            if not fsrs_card_json:
+                logger.error(f"Card {card_uuid} missing FSRS data")
+                return {"success": False, "error": "Card has corrupted FSRS data"}
+            
+            import json
+            from fsrs import Card
+            from datetime import datetime, timezone
+            
+            fsrs_data = json.loads(fsrs_card_json)
+            current_fsrs_card = Card.from_dict(fsrs_data)
+            
+            # FSRS calculation
+            updated_fsrs_card, review_log = self.fsrs_scheduler.review_card(current_fsrs_card, fsrs_rating)
+            new_fsrs_json = json.dumps(updated_fsrs_card.to_dict())
+            
+            # Create review entry
+            new_review = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "fsrs_rating": fsrs_rating,
+                "learning_summary": learning_summary.strip()
+            }
+            
+            review_history = card_obj.properties.get("review_history", [])
+            updated_review_history = review_history + [new_review]
+            
+            # Update database - if this fails, card stays unchanged
+            update_properties = {
+                "fsrs_card_json": new_fsrs_json,
+                "due_date": updated_fsrs_card.due,
+                "review_history": updated_review_history
+            }
+            
+            self.cards_collection.data.update(
+                uuid=card_uuid,
+                properties=update_properties
+            )
+            
+            logger.info(f"Successfully updated card {card_uuid}")
+            
+            return {
+                "success": True,
+                "message": f"Card updated. Next review: {updated_fsrs_card.due.strftime('%Y-%m-%d %H:%M')}",
+                "next_due_date": updated_fsrs_card.due.isoformat(),
+                "review_count": len(updated_review_history)
+            }
+            
+        except ValueError as e:
+            logger.error(f"Validation error: {e}")
+            return {"success": False, "error": str(e)}
+        except json.JSONDecodeError as e:
+            logger.error(f"FSRS data parsing failed: {e}")
+            return {"success": False, "error": "Card has malformed FSRS data"}
+        except Exception as e:
+            logger.error(f"FSRS calculation or database update failed: {e}")
+            return {"success": False, "error": "Database update failed"}
     
     def get_cards_overview(self, subject=None, tags=None, date_filter="today", view="subject_notes"):
         """

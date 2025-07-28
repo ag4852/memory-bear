@@ -121,7 +121,7 @@ def get_or_create_cards_collection(client):
                             Property(name="learning_summary", data_type=DataType.TEXT)
                         ]
                     ),
-                    Property(name="deck_archived", data_type=DataType.BOOLEAN),
+                    Property(name="deck_archived", data_type=DataType.BOOL),
                 ],
                 vectorizer_config=Configure.Vectorizer.text2vec_huggingface(
                     model="sentence-transformers/all-MiniLM-L6-v2"
